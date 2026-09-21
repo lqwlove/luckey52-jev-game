@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # 宝塔服务器部署：git 拉取、构建、PM2 托管 Express（含前端 dist）。
 # 首次：
-#   DEPLOY_REPO=git@github.com:you/jev-game.git bash scripts/bt-deploy.sh --seed
+#   bash scripts/bt-deploy.sh --seed
 # 之后更新：
-#   bash scripts/bt-deploy.sh
+#   bash /www/app/luckey52-jev-game/scripts/bt-deploy.sh
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/www/wwwroot/jev-game}"
+APP_DIR="${APP_DIR:-/www/app/luckey52-jev-game}"
 APP_NAME="${APP_NAME:-jev-game}"
+DEPLOY_REPO="${DEPLOY_REPO:-git@github.com:lqwlove/luckey52-jev-game.git}"
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 SEED=0
 for arg in "$@"; do
@@ -42,7 +43,7 @@ clone_or_pull() {
     git -C "$APP_DIR" pull --ff-only origin "$DEPLOY_BRANCH"
     return
   fi
-  [[ -n "${DEPLOY_REPO:-}" ]] || die "首次部署请设置 DEPLOY_REPO，例如 DEPLOY_REPO=git@github.com:you/jev-game.git"
+  [[ -n "${DEPLOY_REPO:-}" ]] || die "首次部署请设置 DEPLOY_REPO"
   mkdir -p "$(dirname "$APP_DIR")"
   if [[ -d "$APP_DIR" ]] && [[ -n "$(ls -A "$APP_DIR" 2>/dev/null)" ]]; then
     die "$APP_DIR 已存在且不是 git 仓库。请换目录或清空后重试"
