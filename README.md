@@ -1,0 +1,47 @@
+# 和 Jev 抢答
+
+玩家与 Jev 比《幸运52》式短选择题。开局可选简单 / 中等 / 困难，Jev 分别晚 5 / 3 / 1 秒交卷。
+
+```bash
+cp .env.example .env
+# 填入 TYPESAFE_API_KEY。没有 key 时会用本地 mock，方便先看界面。
+npm install
+npm run dev
+```
+
+浏览器打开 http://localhost:5173
+
+题库可入库 PostgreSQL。服务器上执行：
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/001_schema.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/002_seed.sql
+```
+
+`.env` 写上 `DATABASE_URL` 后，对局从该表随机抽题；没配则仍用本地短题库。
+
+## 宝塔部署
+
+生产只跑构建后的 Express（自带 `dist/` 页面和 `/api`）。默认目录 `/www/wwwroot/jev-game`，进程由 PM2 监听 `.env` 里的 `PORT`（默认 8787）。
+
+首次（在服务器上）：
+
+```bash
+DEPLOY_REPO=git@github.com:你的账号/jev-game.git bash scripts/bt-deploy.sh --seed
+```
+
+已有目录时直接更新：
+
+```bash
+bash /www/wwwroot/jev-game/scripts/bt-deploy.sh
+```
+
+脚本不会覆盖已有 `.env`。没有该文件时会从 `.env.example` 复制，请填入 `TYPESAFE_API_KEY` 和可选的 `DATABASE_URL`。
+
+宝塔面板：
+
+1. 软件商店安装 Node.js、Nginx；用 PostgreSQL 时再装数据库和 `psql`
+2. 网站 → 反向代理到 `http://127.0.0.1:8787`
+3. SSL 用宝塔申请
+4. 防火墙只放行 80/443，不要对公网开放 8787
+# luckey52-jev-game
