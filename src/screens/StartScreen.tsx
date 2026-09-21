@@ -9,17 +9,21 @@ type Props = {
 };
 
 const LEVELS: { id: Difficulty; label: string; hint: string }[] = [
-  { id: "easy", label: "简单", hint: "Jev 晚 5 秒" },
-  { id: "medium", label: "中等", hint: "Jev 晚 3 秒" },
-  { id: "hard", label: "困难", hint: "Jev 晚 1 秒" },
+  { id: "easy", label: "简单", hint: "" },
+  { id: "medium", label: "中等", hint: "" },
+  { id: "hard", label: "困难", hint: "" },
 ];
 
-export function StartScreen({ busy, difficulty, onDifficulty, onStart }: Props) {
+export function StartScreen({
+  busy,
+  difficulty,
+  onDifficulty,
+  onStart,
+}: Props) {
   return (
     <section className="screen start">
       <div className="start-card">
-        <p className="kicker">午后纸上擂台</p>
-        <h1>和 Jev 抢答</h1>
+        <h1>Jev 的挑战书</h1>
         <div className="versus-row">
           <div className="versus-chip">
             <IconUser />
@@ -30,8 +34,7 @@ export function StartScreen({ busy, difficulty, onDifficulty, onStart }: Props) 
           </div>
         </div>
         <p>
-          十道短选择题，像《幸运52》那样听完就能抢。谁先提交且答对，谁拿分；抢错则分送给对方。
-          题与题之间只看谁得分，赛后再翻答案。
+          穿越回20年前的《幸运52》，《开心辞典》现场，和现在最快，最强的人工智能Jev比拼。
         </p>
         <div className="difficulty">
           {LEVELS.map((level) => (
@@ -48,7 +51,7 @@ export function StartScreen({ busy, difficulty, onDifficulty, onStart }: Props) 
           ))}
         </div>
         <button className="cta" type="button" onClick={onStart} disabled={busy}>
-          {busy ? "正在铺卷子…" : "开始对局"}
+          {busy ? "正在铺卷子…" : "挑战"}
         </button>
       </div>
     </section>

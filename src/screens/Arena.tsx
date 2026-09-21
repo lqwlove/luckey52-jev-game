@@ -2,6 +2,7 @@ import type { Choice, PublicQuestion, Side } from "../types";
 import {
   IconBolt,
   IconCheck,
+  IconCross,
   IconJev,
   IconLock,
   IconPulse,
@@ -14,15 +15,13 @@ type Props = {
   playerScore: number;
   jevScore: number;
   playerLocked: boolean;
-  jevThinking: boolean;
   jevReady: boolean;
-  jevRemain: number;
   disabled: boolean;
   selected: Choice | null;
+  first: Side | null;
   scorer: Side | null;
   playerPop: boolean;
   jevPop: boolean;
-  jevFlash: boolean;
   boardKey: number;
   onPick: (choice: Choice) => void;
   onNext: () => void;
@@ -30,26 +29,44 @@ type Props = {
 
 const KEYS: Choice[] = ["A", "B", "C", "D"];
 
+function sideCopy(side: Side, locked: boolean, first: Side | null, scorer: Side | null) {
+  if (scorer) {
+    if (first && first !== scorer && first === side) {
+      return { text: "答错了", thinking: false, miss: true, win: false };
+    }
+    if (scorer === side) {
+      return { text: "得分", thinking: false, miss: false, win: true };
+    }
+    return { text: "抢答中", thinking: false, miss: false, win: false };
+  }
+  return {
+    text: locked ? "已锁定" : "抢答中",
+    thinking: !locked,
+    miss: false,
+    win: false,
+  };
+}
+
 export function Arena({
   question,
   total,
   playerScore,
   jevScore,
   playerLocked,
-  jevThinking,
   jevReady,
-  jevRemain,
   disabled,
   selected,
+  first,
   scorer,
   playerPop,
   jevPop,
-  jevFlash,
   boardKey,
   onPick,
   onNext,
 }: Props) {
-  const remainSec = Math.max(0, Math.ceil(jevRemain / 1000));
+  const player = sideCopy("player", playerLocked, first, scorer);
+  const jev = sideCopy("jev", jevReady, first, scorer);
+  const miss = Boolean(first && scorer && first !== scorer);
 
   return (
     <section className="screen arena">
@@ -65,15 +82,18 @@ export function Arena({
       </header>
 
       <div className="columns">
-        <aside className={`side player ${scorer === "player" ? "flash" : ""}`}>
+        <aside className={`side player ${player.win ? "flash" : ""} ${player.miss ? "miss" : ""}`}>
           <div className="avatar">
             <IconUser />
           </div>
           <h2>你</h2>
-          <div className={`score ${playerPop ? "pop" : ""}`}>{playerScore}</div>
-          <div className="status">
-            {playerLocked ? <IconLock /> : <IconPulse />}
-            {playerLocked ? "已锁定" : scorer === "player" ? "本题得分" : "抢答中"}
+          <div className={`score-wrap ${playerPop ? "pop" : ""}`}>
+            <div className={`score ${playerPop ? "pop" : ""}`}>{playerScore}</div>
+            {playerPop ? <span className="score-plus">+1</span> : null}
+          </div>
+          <div className={`status ${player.thinking ? "thinking" : ""} ${player.miss ? "miss" : ""} ${player.win ? "win" : ""}`}>
+            {player.miss ? <IconCross /> : player.thinking ? <IconPulse /> : player.win ? <IconCheck /> : <IconLock />}
+            {player.text}
           </div>
         </aside>
 
@@ -102,12 +122,13 @@ export function Arena({
             </div>
           </article>
 
-          {scorer ? (
+          {scorer && first ? (
             <>
-              <div className={`score-banner ${scorer}`}>
-                本题：{scorer === "player" ? "你" : "Jev"}
+              <div className={`score-banner ${first} ${miss ? "miss" : "hit"}`}>
+                {miss ? <IconCross /> : <IconCheck />}
+                {first === "player" ? "你" : "Jev"}
+                {miss ? "答错了" : "答对了"}
               </div>
-              <div className={`particle ${scorer === "player" ? "left" : "right"}`}>+1</div>
               <button className="next-btn" type="button" onClick={onNext}>
                 下一题
               </button>
@@ -115,21 +136,18 @@ export function Arena({
           ) : null}
         </div>
 
-        <aside className={`side jev ${jevFlash ? "flash" : ""}`}>
+        <aside className={`side jev ${jev.win ? "flash" : ""} ${jev.miss ? "miss" : ""}`}>
           <div className="avatar">
             <IconJev />
           </div>
           <h2>Jev</h2>
-          <div className={`score ${jevPop ? "pop" : ""}`}>{jevScore}</div>
-          <div className={`status ${jevThinking ? "thinking" : ""}`}>
-            {jevThinking ? <IconPulse /> : <IconLock />}
-            {jevThinking
-              ? remainSec > 0
-                ? `还有 ${remainSec} 秒`
-                : "判断中"
-              : jevReady || scorer
-                ? "已作答"
-                : "待发问"}
+          <div className={`score-wrap ${jevPop ? "pop" : ""}`}>
+            <div className={`score ${jevPop ? "pop" : ""}`}>{jevScore}</div>
+            {jevPop ? <span className="score-plus">+1</span> : null}
+          </div>
+          <div className={`status ${jev.thinking ? "thinking" : ""} ${jev.miss ? "miss" : ""} ${jev.win ? "win" : ""}`}>
+            {jev.miss ? <IconCross /> : jev.thinking ? <IconPulse /> : jev.win ? <IconCheck /> : <IconLock />}
+            {jev.text}
           </div>
         </aside>
       </div>

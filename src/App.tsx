@@ -12,7 +12,7 @@ import { ResultScreen } from "./screens/ResultScreen";
 import { StartScreen } from "./screens/StartScreen";
 import type { Choice, Difficulty, PublicQuestion, Review, Screen, Side } from "./types";
 
-const BETWEEN_MS = 1000;
+const BETWEEN_MS = 2500;
 
 export function App() {
   const [screen, setScreen] = useState<Screen>("start");
@@ -24,16 +24,14 @@ export function App() {
   const [jevScore, setJevScore] = useState(0);
   const [selected, setSelected] = useState<Choice | null>(null);
   const [playerLocked, setPlayerLocked] = useState(false);
-  const [jevThinking, setJevThinking] = useState(false);
   const [jevReady, setJevReady] = useState(false);
+  const [first, setFirst] = useState<Side | null>(null);
   const [scorer, setScorer] = useState<Side | null>(null);
   const [playerPop, setPlayerPop] = useState(false);
   const [jevPop, setJevPop] = useState(false);
-  const [jevFlash, setJevFlash] = useState(false);
   const [boardKey, setBoardKey] = useState(0);
   const [review, setReview] = useState<Review | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
-  const [jevRemain, setJevRemain] = useState(0);
 
   const raceRef = useRef(0);
   const nextTimer = useRef<number | null>(null);
@@ -42,13 +40,10 @@ export function App() {
   const matchIdRef = useRef<string | null>(null);
   const questionRef = useRef<PublicQuestion | null>(null);
   const totalRef = useRef(10);
-  const delayRef = useRef(3000);
-  const countdownRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       if (nextTimer.current) window.clearTimeout(nextTimer.current);
-      if (countdownRef.current) window.clearInterval(countdownRef.current);
     };
   }, []);
 
@@ -72,28 +67,6 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  function stopCountdown() {
-    if (countdownRef.current) {
-      window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    }
-    setJevRemain(0);
-  }
-
-  function startCountdown(delayMs: number) {
-    stopCountdown();
-    const ends = Date.now() + delayMs;
-    setJevRemain(delayMs);
-    countdownRef.current = window.setInterval(() => {
-      const left = Math.max(0, ends - Date.now());
-      setJevRemain(left);
-      if (left <= 0 && countdownRef.current) {
-        window.clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
-    }, 200);
-  }
-
   async function start() {
     setBusy(true);
     setToast(null);
@@ -103,20 +76,18 @@ export function App() {
       window.clearTimeout(nextTimer.current);
       nextTimer.current = null;
     }
-    stopCountdown();
     questionRef.current = null;
     setQuestion(null);
     setSelected(null);
     setPlayerLocked(false);
+    setFirst(null);
     setScorer(null);
-    setJevThinking(false);
     setJevReady(false);
     try {
       const match = await createMatch(difficulty);
       scoresRef.current = { player: 0, jev: 0 };
       matchIdRef.current = match.matchId;
       totalRef.current = 10;
-      delayRef.current = match.delayMs;
       setTotal(10);
       setPlayerScore(0);
       setJevScore(0);
@@ -137,36 +108,31 @@ export function App() {
       window.clearTimeout(nextTimer.current);
       nextTimer.current = null;
     }
-    stopCountdown();
     setSelected(null);
     setPlayerLocked(false);
     setJevReady(false);
+    setFirst(null);
     setScorer(null);
-    setJevFlash(false);
+    setPlayerPop(false);
+    setJevPop(false);
     setBoardKey((value) => value + 1);
 
     const opened = await openQuestion(id, index);
     if (token !== raceRef.current) return;
     questionRef.current = opened;
     setQuestion(opened);
-    setJevThinking(true);
-    startCountdown(opened.delayMs ?? delayRef.current);
 
     try {
       const settle = await waitJev(id, index);
       if (token !== raceRef.current) return;
-      stopCountdown();
-      setJevThinking(false);
       setJevReady(settle.jevReady);
       if (settle.resolved && settle.scorer) {
-        applySettle(settle.scorer, settle.first === "jev");
+        applySettle(settle.scorer, settle.first);
       }
     } catch (error) {
       if (token !== raceRef.current) return;
       const replaced = error as Error & { question?: PublicQuestion; replaced?: boolean };
       setToast(replaced.message || "Jev 本题失败，已换题");
-      stopCountdown();
-      setJevThinking(false);
       if (replaced.question) {
         await beginRound(id, index);
       }
@@ -184,7 +150,7 @@ export function App() {
       const settle = await submitPlayer(id, current.index, choice);
       if (token !== raceRef.current) return;
       if (settle.resolved && settle.scorer) {
-        applySettle(settle.scorer, settle.first === "jev");
+        applySettle(settle.scorer, settle.first);
       }
     } catch (error) {
       setPlayerLocked(false);
@@ -193,26 +159,22 @@ export function App() {
     }
   }
 
-  function applySettle(side: Side, jevWasFirst: boolean) {
+  function applySettle(side: Side, whoFirst: Side | null) {
     if (advancingRef.current) return;
     advancingRef.current = true;
-    stopCountdown();
+    setFirst(whoFirst);
     setScorer(side);
-    setJevThinking(false);
-    if (jevWasFirst) {
-      setJevReady(true);
-      setJevFlash(true);
-    }
+    if (whoFirst === "jev") setJevReady(true);
     if (side === "player") {
       scoresRef.current.player += 1;
       setPlayerScore(scoresRef.current.player);
       setPlayerPop(true);
-      window.setTimeout(() => setPlayerPop(false), 420);
+      window.setTimeout(() => setPlayerPop(false), 1200);
     } else {
       scoresRef.current.jev += 1;
       setJevScore(scoresRef.current.jev);
       setJevPop(true);
-      window.setTimeout(() => setJevPop(false), 420);
+      window.setTimeout(() => setJevPop(false), 1200);
     }
     nextTimer.current = window.setTimeout(() => {
       void advance();
@@ -267,15 +229,13 @@ export function App() {
           playerScore={playerScore}
           jevScore={jevScore}
           playerLocked={playerLocked}
-          jevThinking={jevThinking}
           jevReady={jevReady}
-          jevRemain={jevRemain}
           disabled={Boolean(playerLocked || scorer)}
           selected={selected}
+          first={first}
           scorer={scorer}
           playerPop={playerPop}
           jevPop={jevPop}
-          jevFlash={jevFlash}
           boardKey={boardKey}
           onPick={(choice) => void pick(choice)}
           onNext={() => void advance()}
