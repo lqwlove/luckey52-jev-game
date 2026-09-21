@@ -73,29 +73,61 @@ function splitStatements(sql) {
   const statements = [];
   let current = "";
   let inSingle = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+
   for (let i = 0; i < sql.length; i += 1) {
     const ch = sql[i];
-    if (ch === "'" && inSingle && sql[i + 1] === "'") {
-      current += "''";
+    const next = sql[i + 1];
+
+    if (inLineComment) {
+      if (ch === "\n") inLineComment = false;
+      continue;
+    }
+    if (inBlockComment) {
+      if (ch === "*" && next === "/") {
+        inBlockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+    if (inSingle) {
+      current += ch;
+      if (ch === "'" && next === "'") {
+        current += "'";
+        i += 1;
+        continue;
+      }
+      if (ch === "'") inSingle = false;
+      continue;
+    }
+    if (ch === "-" && next === "-") {
+      inLineComment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      inBlockComment = true;
       i += 1;
       continue;
     }
     if (ch === "'") {
-      inSingle = !inSingle;
+      inSingle = true;
       current += ch;
       continue;
     }
-    if (ch === ";" && !inSingle) {
+    if (ch === ";") {
       const stmt = current.trim();
-      if (stmt && !stmt.startsWith("--")) statements.push(stmt);
+      if (stmt) statements.push(stmt);
       current = "";
       continue;
     }
     current += ch;
   }
+
   const tail = current.trim();
   if (tail) statements.push(tail);
-  return statements.filter((stmt) => !/^--/.test(stmt) && stmt.length > 0);
+  return statements;
 }
 
 function loadEnv() {
