@@ -87,12 +87,10 @@ npm run build
 if [[ "$SEED" -eq 1 ]]; then
   db_url="$(env_value DATABASE_URL)"
   if [[ -z "$db_url" ]]; then
-    log "未配置 DATABASE_URL，跳过题库入库"
+    log "未配置 DATABASE_URL，跳过题库迁移"
   else
-    command -v psql >/dev/null || die "带 --seed 需要 psql，请先在宝塔安装 PostgreSQL"
-    log "写入题库"
-    psql "$db_url" -v ON_ERROR_STOP=1 -f sql/001_schema.sql
-    psql "$db_url" -v ON_ERROR_STOP=1 -f sql/002_seed.sql
+    log "执行数据库迁移"
+    npm run migrate
   fi
 fi
 
@@ -120,6 +118,7 @@ cat <<EOF
 更新代码再跑：
   bash $APP_DIR/scripts/bt-deploy.sh
 
-题库入库（需 DATABASE_URL）：
+题库入库（需 DATABASE_URL，连 Docker Postgres）：
   bash $APP_DIR/scripts/bt-deploy.sh --seed
+  # 或：cd $APP_DIR && npm run migrate
 EOF

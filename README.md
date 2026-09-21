@@ -11,14 +11,15 @@ npm run dev
 
 浏览器打开 http://localhost:5173
 
-题库可入库 PostgreSQL。服务器上执行：
+题库可入库 PostgreSQL（Docker 映射到本机即可，不必装主机 psql）：
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/001_schema.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f sql/002_seed.sql
+# .env
+# DATABASE_URL=postgres://用户:密码@127.0.0.1:5432/jev_game
+npm run migrate
 ```
 
-`.env` 写上 `DATABASE_URL` 后，对局从该表随机抽题；没配则仍用本地短题库。
+`.env` 写上 `DATABASE_URL` 后，对局从该表随机抽题；没配则仍用本地短题库。已执行过的 `sql/001_*.sql`、`sql/002_*.sql` 会记入 `schema_migrations`，重复跑会跳过。
 
 ## 宝塔部署
 
@@ -40,7 +41,7 @@ bash /www/app/luckey52-jev-game/scripts/bt-deploy.sh
 
 宝塔面板：
 
-1. 软件商店安装 Node.js、Nginx；用 PostgreSQL 时再装数据库和 `psql`
+1. 软件商店安装 Node.js、Nginx；Postgres 在 Docker 里时把 5432 映射到 127.0.0.1，并在 `.env` 填写 `DATABASE_URL`
 2. 网站 → 反向代理到 `http://127.0.0.1:8787`
 3. SSL 用宝塔申请
 4. 防火墙只放行 80/443，不要对公网开放 8787

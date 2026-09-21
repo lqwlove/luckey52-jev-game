@@ -9,7 +9,8 @@
     "dev:server": "node --watch server/index.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "start": "node server/index.mjs"
+    "start": "node server/index.mjs",
+    "migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "express": "^5.1.0",
